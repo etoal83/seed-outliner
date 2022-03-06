@@ -1,13 +1,16 @@
 #![allow(clippy::wildcard_imports)]
-
+use indexmap::IndexMap;
 use seed::{prelude::*, *};
+use uuid::Uuid;
 
 // ------ ------
 //     Init
 // ------ ------
 
 fn init(_: Url, _: &mut impl Orders<Msg>) -> Model {
-    Model { counter: 0 }
+    Model {
+        outline: Nodes::new(),
+    }
 }
 
 // ------ ------
@@ -15,22 +18,31 @@ fn init(_: Url, _: &mut impl Orders<Msg>) -> Model {
 // ------ ------
 
 struct Model {
-    counter: i32,
+    outline: Nodes
+}
+
+type Nodes = IndexMap<Uuid, Node>;
+
+struct Node {
+    id: Uuid,
+    content: String,
+    children: Nodes,
+    folded: bool,
 }
 
 // ------ ------
 //    Update
 // ------ ------
 
-// (Remove the line below once any of your `Msg` variants doesn't implement `Copy`.)
-#[derive(Copy, Clone)]
 enum Msg {
-    Increment,
+    NodeContentChanged(String),
 }
 
 fn update(msg: Msg, model: &mut Model, _: &mut impl Orders<Msg>) {
     match msg {
-        Msg::Increment => model.counter += 1,
+        Msg::NodeContentChanged(content) => {
+            log!("NodeContentChanged", content);
+        }
     }
 }
 
@@ -38,11 +50,9 @@ fn update(msg: Msg, model: &mut Model, _: &mut impl Orders<Msg>) {
 //     View
 // ------ ------
 
-fn view(model: &Model) -> Node<Msg> {
+fn view(model: &Model) -> seed::virtual_dom::Node<Msg> {
     div![
-        "This is a counter: ",
-        C!["counter"],
-        button![model.counter, ev(Ev::Click, |_| Msg::Increment),],
+        "I'm a placeholder",
     ]
 }
 
