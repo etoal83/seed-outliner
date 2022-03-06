@@ -1,4 +1,7 @@
 #![allow(clippy::wildcard_imports)]
+// TODO: Remove
+#![allow(dead_code, unused_variables)]
+
 use indexmap::IndexMap;
 use seed::{prelude::*, *};
 use uuid::Uuid;
@@ -28,6 +31,29 @@ struct Node {
     content: String,
     children: Nodes,
     folded: bool,
+}
+
+// TODO: Remove
+impl Model {
+    fn add_mock_data(mut self) -> Self {
+        let (id_0, id_1) = (Uuid::new_v4(), Uuid::new_v4());
+
+        self.outline.insert(id_0, Node {
+            id: id_0,
+            content: "First node.".to_owned(),
+            children: Nodes::new(),
+            folded: false,
+        });
+
+        self.outline.insert(id_1, Node {
+            id: id_1,
+            content: "Second node.".to_owned(),
+            children: Nodes::new(),
+            folded: false,
+        });
+
+        self
+    }
 }
 
 // ------ ------
