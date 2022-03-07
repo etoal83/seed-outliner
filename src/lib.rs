@@ -13,7 +13,7 @@ use uuid::Uuid;
 fn init(_: Url, _: &mut impl Orders<Msg>) -> Model {
     Model {
         outline: Nodes::new(),
-    }
+    }.add_mock_data()
 }
 
 // ------ ------
@@ -36,7 +36,7 @@ struct Node {
 // TODO: Remove
 impl Model {
     fn add_mock_data(mut self) -> Self {
-        let (id_0, id_1) = (Uuid::new_v4(), Uuid::new_v4());
+        let (id_0, id_1, id_0_0) = (Uuid::new_v4(), Uuid::new_v4(), Uuid::new_v4());
 
         self.outline.insert(id_0, Node {
             id: id_0,
@@ -51,6 +51,16 @@ impl Model {
             children: Nodes::new(),
             folded: false,
         });
+
+        if let Some(nd) = self.outline.get_mut(&id_0) {
+            nd.children = Nodes::new();
+            nd.children.insert(id_0_0, Node {
+                id: id_1,
+                content: "First child node.".to_owned(),
+                children: Nodes::new(),
+                folded: false,
+            });
+        }
 
         self
     }
@@ -78,7 +88,18 @@ fn update(msg: Msg, model: &mut Model, _: &mut impl Orders<Msg>) {
 
 fn view(model: &Model) -> seed::virtual_dom::Node<Msg> {
     div![
-        "I'm a placeholder",
+        view_nodes(&model.outline)
+    ]
+}
+
+fn view_nodes(nodes: &Nodes) -> seed::virtual_dom::Node<Msg> {
+    ul![
+        nodes.values().map(|node| {
+            li![
+                &node.content,
+                IF!(not(&node.children.is_empty()) => view_nodes(&node.children)),
+            ]
+        })
     ]
 }
 
