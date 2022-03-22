@@ -18,6 +18,7 @@ wasm-bindgen-test = "0.3.18"
 [dependencies]
 indexmap = "1.8.0"
 seed = "0.8.0"
+seed_styles = { git = "https://github.com/seed-rs/styles_hooks", package = "seed_styles", branch = "main" }
 uuid = "0.8.2"
 
 [profile.release]

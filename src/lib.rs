@@ -92,15 +92,23 @@ fn view(model: &Model) -> seed::virtual_dom::Node<Msg> {
     ]
 }
 
-fn view_nodes(nodes: &Nodes) -> seed::virtual_dom::Node<Msg> {
-    ul![
-        nodes.values().map(|node| {
-            li![
+fn view_nodes(nodes: &Nodes) -> Vec<seed::virtual_dom::Node<Msg>> {
+    nodes.values().map(|node| {
+        div![
+            C!["node"],
+            div![
+                C!["node-self"],
+                attrs!{
+                    At::ContentEditable => true,
+                },
                 &node.content,
+            ],
+            div![
+                C!["node-children"],
                 IF!(not(&node.children.is_empty()) => view_nodes(&node.children)),
             ]
-        })
-    ]
+        ]
+    }).collect()
 }
 
 // ------ ------
