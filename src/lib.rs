@@ -4,6 +4,7 @@
 
 use indexmap::IndexMap;
 use seed::{prelude::*, *};
+use seed_styles::{*, px, rem};
 use uuid::Uuid;
 
 // ------ ------
@@ -98,13 +99,33 @@ fn view_nodes(nodes: &Nodes) -> Vec<seed::virtual_dom::Node<Msg>> {
             C!["node"],
             div![
                 C!["node-self"],
-                attrs!{
-                    At::ContentEditable => true,
-                },
-                &node.content,
+                s().padding_y(rem(0.2)),
+                a![
+                    C!["node-bullet"],
+                    s().display(CssDisplay::InlineBlock),
+                    span![
+                        C!["material-icons"],
+                        s().font_size(rem(0.7)),
+                        "fiber_manual_record"
+                    ],
+                    attrs!{At::TabIndex => -1},
+                ],
+                div![
+                    C!["node-content"],
+                    s().display(CssDisplay::InlineBlock)
+                        .margin_left(px(8))
+                        .font_size(rem(1)),
+                    attrs!{
+                        At::ContentEditable => true,
+                    },
+                    &node.content,
+                ],
             ],
             div![
                 C!["node-children"],
+                s().margin_left(px(10))
+                    .border_left(CssBorderLeft::Border(CssBorderWidth::Length(px(1)), CssBorderStyle::Solid, CssColor::Rgba(0., 0., 0., 0.4)))
+                    .padding_left(px(20)),
                 IF!(not(&node.children.is_empty()) => view_nodes(&node.children)),
             ]
         ]
