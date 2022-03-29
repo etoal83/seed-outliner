@@ -36,6 +36,7 @@ struct Node {
     folded: bool,
 }
 
+#[derive(Debug)]
 struct EditingNode {
     id: Uuid,
     content: String,
@@ -111,6 +112,9 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         },
         Msg::EditingNodeContentChanged(content) => {
             log!("EditingNodeContentChanged", content);
+            if let Some(editing_node) = &mut model.editing_node {
+                editing_node.content = content;
+            }
         },
     }
 }
@@ -160,6 +164,11 @@ fn view_nodes(nodes: &Nodes, editing_node: Option<&EditingNode>) -> Vec<seed::vi
                     },
                     &node.content,
                     ev(Ev::Click, move |_| Msg::EditNodeContent(Some(id))),
+                    ev(Ev::Input, |event| {
+                        let target = event.current_target().unwrap();
+                        let content = target.dyn_ref::<web_sys::HtmlElement>().unwrap().text_content().unwrap();
+                        Msg::EditingNodeContentChanged(content)
+                    }),
                 ],
             ],
             div![
