@@ -82,6 +82,7 @@ impl Model {
 enum Msg {
     EditNodeContent(Option<Uuid>),
     EditingNodeContentChanged(String),
+    InsertNewNode,
 }
 
 fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
@@ -116,6 +117,9 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 editing_node.content = content;
             }
         },
+        Msg::InsertNewNode => {
+            log!("InsertNewNode");
+        }
     }
 }
 
