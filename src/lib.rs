@@ -13,7 +13,8 @@ use uuid::Uuid;
 
 fn init(_: Url, _: &mut impl Orders<Msg>) -> Model {
     Model {
-        outline: Nodes::new(),
+        nodes: Nodes::new(),
+        current_children: Vec::new(),
         editing_node: None,
     }.add_mock_data()
 }
@@ -23,7 +24,8 @@ fn init(_: Url, _: &mut impl Orders<Msg>) -> Model {
 // ------ ------
 
 struct Model {
-    outline: Nodes,
+    nodes: Nodes,
+    current_children: Vec<Uuid>,
     editing_node: Option<EditingNode>,
 }
 
@@ -32,10 +34,11 @@ type Nodes = IndexMap<Uuid, Node>;
 struct Node {
     id: Uuid,
     content: String,
-    children: Nodes,
+    children: Vec<Uuid>,
     folded: bool,
 }
 
+#[derive(Debug)]
 struct EditingNode {
     id: Uuid,
     content: String,
@@ -47,28 +50,28 @@ impl Model {
     fn add_mock_data(mut self) -> Self {
         let (id_0, id_1, id_0_0) = (Uuid::new_v4(), Uuid::new_v4(), Uuid::new_v4());
 
-        self.outline.insert(id_0, Node {
+        self.nodes.insert(id_0, Node {
             id: id_0,
             content: "First node.".to_owned(),
-            children: Nodes::new(),
+            children: vec![id_0_0],
             folded: false,
         });
 
-        self.outline.insert(id_1, Node {
+        self.nodes.insert(id_1, Node {
             id: id_1,
             content: "Second node.".to_owned(),
-            children: Nodes::new(),
+            children: Vec::new(),
             folded: false,
         });
 
-        if let Some(nd) = self.outline.get_mut(&id_0) {
-            nd.children.insert(id_0_0, Node {
-                id: id_0_0,
-                content: "First child node.".to_owned(),
-                children: Nodes::new(),
-                folded: false,
-            });
-        }
+        self.nodes.insert(id_0_0, Node {
+            id: id_1,
+            content: "First child node.".to_owned(),
+            children: Vec::new(),
+            folded: false,
+        });
+
+        self.current_children.extend_from_slice(&[id_0, id_1]);
 
         self
     }
@@ -81,13 +84,14 @@ impl Model {
 enum Msg {
     EditNodeContent(Option<Uuid>),
     EditingNodeContentChanged(String),
+    InsertNewNode,
 }
 
 fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     match msg {
         Msg::EditNodeContent(Some(id)) => {
             log!("EditNodeContent: ", id);
-            if let Some(node) = model.outline.get(&id) {
+            if let Some(node) = model.nodes.get(&id) {
                 let content_element = ElRef::new();
 
                 model.editing_node = Some(EditingNode {
@@ -111,7 +115,14 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         },
         Msg::EditingNodeContentChanged(content) => {
             log!("EditingNodeContentChanged", content);
+            if let Some(editing_node) = &mut model.editing_node {
+                editing_node.content = content;
+            }
         },
+        Msg::InsertNewNode => {
+            log!("InsertNewNode");
+
+        }
     }
 }
 
@@ -121,13 +132,13 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
 
 fn view(model: &Model) -> seed::virtual_dom::Node<Msg> {
     div![
-        view_nodes(&model.outline, model.editing_node.as_ref()),
+        view_nodes(&model.nodes, &model.current_children, model.editing_node.as_ref()),
     ]
 }
 
-fn view_nodes(nodes: &Nodes, editing_node: Option<&EditingNode>) -> Vec<seed::virtual_dom::Node<Msg>> {
-    nodes.values().map(|node| {
-        let id = node.id;
+fn view_nodes(nodes: &Nodes, children: &Vec<Uuid>, editing_node: Option<&EditingNode>) -> Vec<seed::virtual_dom::Node<Msg>> {
+    children.to_vec().into_iter().map(|id| {
+        let node = nodes.get(&id).unwrap();
         let is_editing = Some(id) == editing_node.map(|editing_node| editing_node.id);
 
         div![
@@ -160,6 +171,11 @@ fn view_nodes(nodes: &Nodes, editing_node: Option<&EditingNode>) -> Vec<seed::vi
                     },
                     &node.content,
                     ev(Ev::Click, move |_| Msg::EditNodeContent(Some(id))),
+                    ev(Ev::Input, |event| {
+                        let target = event.current_target().unwrap();
+                        let content = target.dyn_ref::<web_sys::HtmlElement>().unwrap().text_content().unwrap();
+                        Msg::EditingNodeContentChanged(content)
+                    }),
                 ],
             ],
             div![
@@ -167,7 +183,7 @@ fn view_nodes(nodes: &Nodes, editing_node: Option<&EditingNode>) -> Vec<seed::vi
                 s().margin_left(px(10))
                     .border_left(CssBorderLeft::Border(CssBorderWidth::Length(px(1)), CssBorderStyle::Solid, CssColor::Rgba(0., 0., 0., 0.4)))
                     .padding_left(px(20)),
-                IF!(not(&node.children.is_empty()) => view_nodes(&node.children, editing_node)),
+                IF!(not(&node.children.is_empty()) => view_nodes(nodes, &node.children, editing_node)),
             ]
         ]
     }).collect()
