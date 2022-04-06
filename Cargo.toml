@@ -17,6 +17,7 @@ wasm-bindgen-test = "0.3.18"
 
 [dependencies]
 indexmap = "1.8.0"
+indextree = "4.4.0"
 seed = { git = "https://github.com/seed-rs/seed", branch = "master" }
 seed_styles = { git = "https://github.com/seed-rs/styles_hooks", package = "seed_styles", branch = "main" }
 uuid = "0.8.2"
