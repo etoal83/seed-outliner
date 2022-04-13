@@ -3,6 +3,7 @@
 #![allow(dead_code, unused_variables)]
 
 use indexmap::IndexMap;
+use indextree::{Arena, NodeId as ArenaNodeId};
 use seed::{prelude::*, *};
 use seed_styles::{*, px, rem};
 use uuid::Uuid;
@@ -12,9 +13,22 @@ use uuid::Uuid;
 // ------ ------
 
 fn init(_: Url, _: &mut impl Orders<Msg>) -> Model {
+    let root_node_id = Uuid::new_v4();
+    let mut arena = Arena::new();
+    let root = arena.new_node(root_node_id);
+
+    let root_node = Node {
+        id: root_node_id,
+        content: root.to_string(),
+        folded: false,
+    };
+    let mut nodes = Nodes::new();
+    nodes.insert(root_node_id, root_node);
+    
     Model {
-        nodes: Nodes::new(),
-        current_children: Vec::new(),
+        nodes: nodes,
+        tree: arena,
+        root: root,
         editing_node: None,
     }.add_mock_data()
 }
@@ -25,7 +39,8 @@ fn init(_: Url, _: &mut impl Orders<Msg>) -> Model {
 
 struct Model {
     nodes: Nodes,
-    current_children: Vec<Uuid>,
+    tree: Arena<Uuid>,
+    root: ArenaNodeId,
     editing_node: Option<EditingNode>,
 }
 
@@ -34,7 +49,6 @@ type Nodes = IndexMap<Uuid, Node>;
 struct Node {
     id: Uuid,
     content: String,
-    children: Vec<Uuid>,
     folded: bool,
 }
 
@@ -49,29 +63,31 @@ struct EditingNode {
 impl Model {
     fn add_mock_data(mut self) -> Self {
         let (id_0, id_1, id_0_0) = (Uuid::new_v4(), Uuid::new_v4(), Uuid::new_v4());
-
-        self.nodes.insert(id_0, Node {
+        let first_node = Node {
             id: id_0,
             content: "First node.".to_owned(),
-            children: vec![id_0_0],
             folded: false,
-        });
-
-        self.nodes.insert(id_1, Node {
+        };
+        let second_node = Node {
             id: id_1,
             content: "Second node.".to_owned(),
-            children: Vec::new(),
             folded: false,
-        });
-
-        self.nodes.insert(id_0_0, Node {
-            id: id_1,
+        };
+        let first_child_node = Node {
+            id: id_0_0,
             content: "First child node.".to_owned(),
-            children: Vec::new(),
-            folded: false,
-        });
+            folded: false,            
+        };
+        self.nodes.insert(id_0, first_node);
+        self.nodes.insert(id_1, second_node);
+        self.nodes.insert(id_0_0, first_child_node);
 
-        self.current_children.extend_from_slice(&[id_0, id_1]);
+        let first_node = self.tree.new_node(id_0);
+        let second_node = self.tree.new_node(id_1);
+        let first_child_node = self.tree.new_node(id_0_0);
+        self.root.append(first_node, &mut self.tree);
+        self.root.append(second_node, &mut self.tree);
+        first_node.append(first_child_node, &mut self.tree);
 
         self
     }
@@ -132,12 +148,14 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
 
 fn view(model: &Model) -> seed::virtual_dom::Node<Msg> {
     div![
-        view_nodes(&model.nodes, &model.current_children, model.editing_node.as_ref()),
+        view_nodes(&model.nodes, &model.tree, &model.root, model.editing_node.as_ref()),
     ]
 }
 
-fn view_nodes(nodes: &Nodes, children: &Vec<Uuid>, editing_node: Option<&EditingNode>) -> Vec<seed::virtual_dom::Node<Msg>> {
-    children.to_vec().into_iter().map(|id| {
+fn view_nodes(nodes: &Nodes, tree: &Arena<Uuid>, current_node: &ArenaNodeId, editing_node: Option<&EditingNode>) -> Vec<seed::virtual_dom::Node<Msg>> {
+    current_node.children(tree).map(|arena_node_id| {
+    // nodes.values().map(|node| {
+        let id = *tree.get(arena_node_id).unwrap().get();
         let node = nodes.get(&id).unwrap();
         let is_editing = Some(id) == editing_node.map(|editing_node| editing_node.id);
 
@@ -183,7 +201,7 @@ fn view_nodes(nodes: &Nodes, children: &Vec<Uuid>, editing_node: Option<&Editing
                 s().margin_left(px(10))
                     .border_left(CssBorderLeft::Border(CssBorderWidth::Length(px(1)), CssBorderStyle::Solid, CssColor::Rgba(0., 0., 0., 0.4)))
                     .padding_left(px(20)),
-                IF!(not(&node.children.is_empty()) => view_nodes(nodes, &node.children, editing_node)),
+                IF!(arena_node_id.children(tree).peekable().peek().is_some() => view_nodes(nodes, tree, &arena_node_id, editing_node)),
             ]
         ]
     }).collect()
