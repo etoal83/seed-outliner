@@ -57,6 +57,7 @@ struct EditingNode {
     id: Uuid,
     content: String,
     content_element: ElRef<web_sys::HtmlElement>,
+    vertex: Vertex,
 }
 
 // TODO: Remove
@@ -98,22 +99,25 @@ impl Model {
 // ------ ------
 
 enum Msg {
-    EditNodeContent(Option<Uuid>),
+    EditNodeContent(Option<Vertex>),
     EditingNodeContentChanged(String),
     InsertNewNode(String),
 }
 
 fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     match msg {
-        Msg::EditNodeContent(Some(id)) => {
-            log!("EditNodeContent: ", id);
-            if let Some(node) = model.nodes.get(&id) {
+        Msg::EditNodeContent(Some(vertex)) => {
+            log!("EditNodeContent: ", vertex);
+            if let Some(node) = model.tree.get(vertex) {
+                let id = *node.get();
+                let node = model.nodes.get(&id).unwrap();
                 let content_element = ElRef::new();
 
                 model.editing_node = Some(EditingNode {
                     id,
                     content: node.content.clone(),
                     content_element: content_element.clone(),
+                    vertex,
                 });
 
                 orders.after_next_render(move |_| {
@@ -186,7 +190,7 @@ fn view_nodes(nodes: &Nodes, tree: &Arena<Uuid>, current_vertex: &Vertex, editin
                         At::ContentEditable => true,
                     },
                     &node.content,
-                    ev(Ev::Click, move |_| Msg::EditNodeContent(Some(id))),
+                    ev(Ev::Click, move |_| Msg::EditNodeContent(Some(vertex))),
                     ev(Ev::Input, |event| {
                         let target = event.current_target().unwrap();
                         let content = target.dyn_ref::<web_sys::HtmlElement>().unwrap().text_content().unwrap();
