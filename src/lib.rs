@@ -100,7 +100,7 @@ impl Model {
 enum Msg {
     EditNodeContent(Option<Uuid>),
     EditingNodeContentChanged(String),
-    InsertNewNode,
+    InsertNewNode(String),
 }
 
 fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
@@ -135,9 +135,8 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 editing_node.content = content;
             }
         },
-        Msg::InsertNewNode => {
-            log!("InsertNewNode");
-
+        Msg::InsertNewNode(content) => {
+            log!("InsertNewNode", content);
         }
     }
 }
@@ -154,7 +153,6 @@ fn view(model: &Model) -> seed::virtual_dom::Node<Msg> {
 
 fn view_nodes(nodes: &Nodes, tree: &Arena<Uuid>, current_node: &ArenaNodeId, editing_node: Option<&EditingNode>) -> Vec<seed::virtual_dom::Node<Msg>> {
     current_node.children(tree).map(|arena_node_id| {
-    // nodes.values().map(|node| {
         let id = *tree.get(arena_node_id).unwrap().get();
         let node = nodes.get(&id).unwrap();
         let is_editing = Some(id) == editing_node.map(|editing_node| editing_node.id);
