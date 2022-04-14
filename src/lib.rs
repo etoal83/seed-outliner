@@ -3,7 +3,7 @@
 #![allow(dead_code, unused_variables)]
 
 use indexmap::IndexMap;
-use indextree::{Arena, NodeId as ArenaNodeId};
+use indextree::{Arena, NodeId as Vertex};
 use seed::{prelude::*, *};
 use seed_styles::{*, px, rem};
 use uuid::Uuid;
@@ -40,7 +40,7 @@ fn init(_: Url, _: &mut impl Orders<Msg>) -> Model {
 struct Model {
     nodes: Nodes,
     tree: Arena<Uuid>,
-    root: ArenaNodeId,
+    root: Vertex,
     editing_node: Option<EditingNode>,
 }
 
@@ -151,9 +151,9 @@ fn view(model: &Model) -> seed::virtual_dom::Node<Msg> {
     ]
 }
 
-fn view_nodes(nodes: &Nodes, tree: &Arena<Uuid>, current_node: &ArenaNodeId, editing_node: Option<&EditingNode>) -> Vec<seed::virtual_dom::Node<Msg>> {
-    current_node.children(tree).map(|arena_node_id| {
-        let id = *tree.get(arena_node_id).unwrap().get();
+fn view_nodes(nodes: &Nodes, tree: &Arena<Uuid>, current_vertex: &Vertex, editing_node: Option<&EditingNode>) -> Vec<seed::virtual_dom::Node<Msg>> {
+    current_vertex.children(tree).map(|vertex| {
+        let id = *tree.get(vertex).unwrap().get();
         let node = nodes.get(&id).unwrap();
         let is_editing = Some(id) == editing_node.map(|editing_node| editing_node.id);
 
@@ -199,7 +199,7 @@ fn view_nodes(nodes: &Nodes, tree: &Arena<Uuid>, current_node: &ArenaNodeId, edi
                 s().margin_left(px(10))
                     .border_left(CssBorderLeft::Border(CssBorderWidth::Length(px(1)), CssBorderStyle::Solid, CssColor::Rgba(0., 0., 0., 0.4)))
                     .padding_left(px(20)),
-                IF!(arena_node_id.children(tree).peekable().peek().is_some() => view_nodes(nodes, tree, &arena_node_id, editing_node)),
+                IF!(vertex.children(tree).peekable().peek().is_some() => view_nodes(nodes, tree, &vertex, editing_node)),
             ]
         ]
     }).collect()
