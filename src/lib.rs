@@ -141,6 +141,19 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         },
         Msg::InsertNewNode(content) => {
             log!("InsertNewNode", content);
+            if let Some(editing_node) = &mut model.editing_node {
+                let new_id = Uuid::new_v4();
+                
+                model.nodes.insert(new_id, Node{
+                    id: new_id,
+                    content: "".to_owned(),
+                    folded: false,
+                });
+                
+                let new_node = model.tree.new_node(new_id);
+                editing_node.vertex.insert_after(new_node, &mut model.tree);
+                orders.send_msg(Msg::EditNodeContent(Some(new_node)));
+            }
         }
     }
 }
@@ -195,6 +208,12 @@ fn view_nodes(nodes: &Nodes, tree: &Arena<Uuid>, current_vertex: &Vertex, editin
                         let target = event.current_target().unwrap();
                         let content = target.dyn_ref::<web_sys::HtmlElement>().unwrap().text_content().unwrap();
                         Msg::EditingNodeContentChanged(content)
+                    }),
+                    keyboard_ev(Ev::KeyDown, |keyboard_event| {
+                        IF!(!keyboard_event.is_composing() && keyboard_event.key_code() != 229 && keyboard_event.key().as_str() == "Enter" => {
+                            keyboard_event.prevent_default();
+                            Msg::InsertNewNode("".to_string())
+                        })
                     }),
                 ],
             ],
