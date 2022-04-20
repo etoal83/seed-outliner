@@ -20,6 +20,7 @@ indexmap = "1.8.0"
 indextree = "4.4.0"
 seed = { git = "https://github.com/seed-rs/seed", branch = "master" }
 seed_styles = { git = "https://github.com/seed-rs/styles_hooks", package = "seed_styles", branch = "main" }
+unicode-segmentation = "1.9.0"
 uuid = "0.8.2"
 
 [profile.release]
