@@ -101,7 +101,7 @@ impl Model {
 enum Msg {
     StartEditingNodeContent(Option<Vertex>),
     EditingNodeContentChanged(String),
-    InsertNewNode(String),
+    SaveEditedNodeContent,
 }
 
 fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
@@ -139,8 +139,14 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 editing_node.content = content;
             }
         },
-        Msg::InsertNewNode(content) => {
-            log!("InsertNewNode", content);
+        Msg::SaveEditedNodeContent => {
+            log!("SaveEditedNodeContent");
+            if let Some(editing_node) = model.editing_node.take() {
+                if let Some(node) = model.nodes.get_mut(&editing_node.id) {
+                    node.content = editing_node.content.to_owned();
+                }
+            }
+        },
             if let Some(editing_node) = &mut model.editing_node {
                 let new_id = Uuid::new_v4();
                 
