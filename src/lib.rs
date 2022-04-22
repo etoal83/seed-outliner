@@ -99,15 +99,15 @@ impl Model {
 // ------ ------
 
 enum Msg {
-    EditNodeContent(Option<Vertex>),
+    StartEditingNodeContent(Option<Vertex>),
     EditingNodeContentChanged(String),
     InsertNewNode(String),
 }
 
 fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     match msg {
-        Msg::EditNodeContent(Some(vertex)) => {
-            log!("EditNodeContent: ", vertex);
+        Msg::StartEditingNodeContent(Some(vertex)) => {
+            log!("StartEditingNodeContent: ", vertex);
             if let Some(node) = model.tree.get(vertex) {
                 let id = *node.get();
                 let node = model.nodes.get(&id).unwrap();
@@ -129,8 +129,8 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 });
             }
         },
-        Msg::EditNodeContent(None) => {
-            log!("EditNodeContent: None");
+        Msg::StartEditingNodeContent(None) => {
+            log!("StartEditingNodeContent: None");
             model.editing_node = None;
         },
         Msg::EditingNodeContentChanged(content) => {
@@ -203,7 +203,7 @@ fn view_nodes(nodes: &Nodes, tree: &Arena<Uuid>, current_vertex: &Vertex, editin
                         At::ContentEditable => true,
                     },
                     &node.content,
-                    ev(Ev::Click, move |_| Msg::EditNodeContent(Some(vertex))),
+                    ev(Ev::Click, move |_| Msg::StartEditingNodeContent(Some(vertex))),
                     ev(Ev::Input, |event| {
                         let target = event.current_target().unwrap();
                         let content = target.dyn_ref::<web_sys::HtmlElement>().unwrap().text_content().unwrap();
