@@ -26,6 +26,10 @@ fn init(_: Url, _: &mut impl Orders<Msg>) -> Model {
     let mut nodes = Nodes::new();
     nodes.insert(root_node_id, root_node);
     
+    orders.stream(streams::document_event(Ev::SelectionChange, |_| {
+        Msg::CaretPositionChanged
+    }));
+    
     Model {
         nodes: nodes,
         tree: arena,
@@ -121,6 +125,7 @@ enum Msg {
     EditingNodeContentChanged(String),
     SaveEditedNodeContent,
     InsertNewNode,
+    CaretPositionChanged,
 }
 
 fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
@@ -190,6 +195,13 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 let new_node = model.tree.new_node(new_id);
                 editing_node.vertex.insert_after(new_node, &mut model.tree);
                 orders.send_msg(Msg::StartEditingNodeContent(Some(new_node)));
+            }
+        Msg::CaretPositionChanged => {
+            if let Some(editing_node) = &mut model.editing_node {
+                let selection = document().get_selection().expect("get selection").unwrap();
+                let caret_position = selection.focus_offset();
+                editing_node.caret_position = caret_position;
+                log!("Msg::CaretPositionChanged", caret_position);
             }
         }
     }
