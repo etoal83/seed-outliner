@@ -59,6 +59,7 @@ struct EditingNode {
     content: String,
     content_element: ElRef<web_sys::HtmlElement>,
     vertex: Vertex,
+    caret_position: u32,
 }
 
 // TODO: Remove
@@ -130,12 +131,15 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 let id = *node.get();
                 let node = model.nodes.get(&id).unwrap();
                 let content_element = ElRef::new();
+                let selection = document().get_selection().expect("get selection").unwrap();
+                let caret_position = selection.focus_offset();
 
                 model.editing_node = Some(EditingNode {
                     id,
                     content: node.content.clone(),
                     content_element: content_element.clone(),
                     vertex,
+                    caret_position: caret_position,
                 });
 
                 orders.after_next_render(move |_| {
