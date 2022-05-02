@@ -64,7 +64,7 @@ struct EditingNode {
 // TODO: Remove
 impl Model {
     fn add_mock_data(mut self) -> Self {
-        let (id_0, id_1, id_0_0) = (Uuid::new_v4(), Uuid::new_v4(), Uuid::new_v4());
+        let (id_0, id_1, id_2, id_0_0, id_2_0) = (Uuid::new_v4(), Uuid::new_v4(), Uuid::new_v4(), Uuid::new_v4(), Uuid::new_v4());
         let first_node = Node {
             id: id_0,
             content: "First node.".to_owned(),
@@ -75,21 +75,37 @@ impl Model {
             content: "Second node.".to_owned(),
             folded: false,
         };
+        let third_node = Node {
+            id: id_2,
+            content: "Third node.".to_owned(),
+            folded: false,
+        };
         let first_child_node = Node {
             id: id_0_0,
             content: "First child node.".to_owned(),
             folded: false,            
         };
+        let third_child_node = Node {
+            id: id_0_0,
+            content: "Third child node.".to_owned(),
+            folded: false,
+        };
         self.nodes.insert(id_0, first_node);
         self.nodes.insert(id_1, second_node);
+        self.nodes.insert(id_2, third_node);
         self.nodes.insert(id_0_0, first_child_node);
+        self.nodes.insert(id_2_0, third_child_node);
 
         let first_node = self.tree.new_node(id_0);
         let second_node = self.tree.new_node(id_1);
+        let third_node = self.tree.new_node(id_2);
         let first_child_node = self.tree.new_node(id_0_0);
+        let third_child_node = self.tree.new_node(id_2_0);
         self.root.append(first_node, &mut self.tree);
         self.root.append(second_node, &mut self.tree);
+        self.root.append(third_node, &mut self.tree);
         first_node.append(first_child_node, &mut self.tree);
+        third_node.append(third_child_node, &mut self.tree);
 
         self
     }
