@@ -13,7 +13,7 @@ use uuid::Uuid;
 //     Init
 // ------ ------
 
-fn init(_: Url, _: &mut impl Orders<Msg>) -> Model {
+fn init(_: Url, orders: &mut impl Orders<Msg>) -> Model {
     let root_node_id = Uuid::new_v4();
     let mut arena = Arena::new();
     let root = arena.new_node(root_node_id);
@@ -196,6 +196,7 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 editing_node.vertex.insert_after(new_node, &mut model.tree);
                 orders.send_msg(Msg::StartEditingNodeContent(Some(new_node)));
             }
+        },
         Msg::CaretPositionChanged => {
             if let Some(editing_node) = &mut model.editing_node {
                 let selection = document().get_selection().expect("get selection").unwrap();
