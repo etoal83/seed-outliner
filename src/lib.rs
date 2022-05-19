@@ -253,7 +253,8 @@ fn view_nodes(nodes: &Nodes, tree: &Arena<Uuid>, current_vertex: &Vertex, editin
                         At::ContentEditable => true,
                     },
                     &node.content,
-                    ev(Ev::Click, move |_| Msg::StartEditingNodeContent(Some(vertex))),
+                    ev(Ev::Focus, move |_| Msg::StartEditingNodeContent(Some(vertex))),
+                    ev(Ev::Blur, |_| Msg::SaveEditedNodeContent),
                     ev(Ev::Input, |event| {
                         let target = event.current_target().unwrap();
                         let content = target.dyn_ref::<web_sys::HtmlElement>().unwrap().text_content().unwrap();
