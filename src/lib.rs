@@ -125,13 +125,13 @@ enum Msg {
     EditingNodeContentChanged(String),
     SaveEditedNodeContent,
     InsertNewNode,
+    DeleteNodeBackward,
     CaretPositionChanged,
 }
 
 fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     match msg {
         Msg::StartEditingNodeContent(Some(vertex)) => {
-            log!("StartEditingNodeContent: ", vertex);
             if let Some(node) = model.tree.get(vertex) {
                 let id = *node.get();
                 let node = model.nodes.get(&id).unwrap();
@@ -197,6 +197,9 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 orders.send_msg(Msg::StartEditingNodeContent(Some(new_node)));
             }
         },
+        Msg::DeleteNodeBackward => {
+            log!("DeleteNodeBackward");
+        }
         Msg::CaretPositionChanged => {
             if let Some(editing_node) = &mut model.editing_node {
                 let selection = document().get_selection().expect("get selection").unwrap();
@@ -223,6 +226,7 @@ fn view_nodes(nodes: &Nodes, tree: &Arena<Uuid>, current_vertex: &Vertex, editin
         let id = *tree.get(vertex).unwrap().get();
         let node = nodes.get(&id).unwrap();
         let is_editing = Some(id) == editing_node.map(|editing_node| editing_node.id);
+        let is_deletable = editing_node.map_or(false, |editing_node| editing_node.caret_position == 0);
 
         div![
             C!["node"],
@@ -264,6 +268,11 @@ fn view_nodes(nodes: &Nodes, tree: &Arena<Uuid>, current_vertex: &Vertex, editin
                         IF!(!keyboard_event.is_composing() && keyboard_event.key_code() != 229 && keyboard_event.key().as_str() == "Enter" => {
                             keyboard_event.prevent_default();
                             Msg::InsertNewNode
+                        })
+                    }),
+                    keyboard_ev(Ev::KeyDown, move |keyboard_event| {
+                        IF!(!keyboard_event.is_composing() && keyboard_event.key_code() != 229 && is_deletable && keyboard_event.key().as_str() == "Backspace" => {
+                            Msg::DeleteNodeBackward
                         })
                     }),
                 ],
