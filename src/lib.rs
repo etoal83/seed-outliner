@@ -222,6 +222,7 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                     
                     let id = *model.tree.get(vertex).unwrap().get();
                     let node = model.nodes.get_mut(&id).unwrap();
+                    let caret_position_dest = UnicodeSegmentation::graphemes(node.content.as_str(), true).collect::<Vec<&str>>().len() as u32;
                     node.content = format!("{}{}", node.content.to_owned(), taken_content);
                     let content_element = ElRef::new();
 
@@ -235,10 +236,22 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
 
                     orders.after_next_render(move |_| {
                         let content_element = content_element.get().expect("content_element");
-
                         content_element
                             .focus()
                             .expect("focus content_element");
+
+                        let selection = document().get_selection().expect("get selection").unwrap();
+                        let range = document().create_range().expect("create range");
+                        range
+                            .set_start(&content_element.child_nodes().get(0).unwrap(), caret_position_dest)
+                            .expect("Range: set start");
+                        range.collapse();    
+                        selection
+                            .remove_all_ranges()
+                            .expect("Selection: remove all ranges");
+                        selection
+                            .add_range(&range)
+                            .expect("Selection: add range")
                     });
                 }
             }
