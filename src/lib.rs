@@ -200,7 +200,49 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         },
         Msg::DeleteNodeBackward => {
             log!("DeleteNodeBackward");
-        }
+            let mut destination = None;
+            let dest= &mut destination;
+
+            if let Some(editing_node) = &model.editing_node {
+                let has_children = editing_node.vertex.children(&model.tree).next().is_some();
+                let previous_sibling = editing_node.vertex.preceding_siblings(&model.tree).skip(1).next();
+                let parent = editing_node.vertex.ancestors(&model.tree).skip(1).next();
+                *dest = match (has_children, previous_sibling, parent) {
+                    (false, Some(sibling), _) => sibling.descendants(&model.tree).last(),
+                    (false, None, Some(parent)) => if parent != model.root { Some(parent) } else { None },
+                    (true, Some(sibling), _) => if sibling.children(&model.tree).next().is_none() { Some(sibling) } else { None },
+                    (_, _, _) => None,
+                };
+            };
+
+            if let Some(vertex) = destination {
+                if let Some(editing_node) = model.editing_node.take() {
+                    let taken_content = editing_node.content.to_owned();
+                    orders.send_msg(Msg::RemoveNode(editing_node.vertex));
+                    
+                    let id = *model.tree.get(vertex).unwrap().get();
+                    let node = model.nodes.get_mut(&id).unwrap();
+                    node.content = format!("{}{}", node.content.to_owned(), taken_content);
+                    let content_element = ElRef::new();
+
+                    model.editing_node = Some(EditingNode {
+                        id,
+                        content: node.content.clone(),
+                        content_element: content_element.clone(),
+                        vertex,
+                        caret_position: 0,
+                    });
+
+                    orders.after_next_render(move |_| {
+                        let content_element = content_element.get().expect("content_element");
+
+                        content_element
+                            .focus()
+                            .expect("focus content_element");
+                    });
+                }
+            }
+        },
         Msg::RemoveNode(vertex) => {
             log!("RemoveNode");
             let id = *model.tree.get(vertex).unwrap().get();
