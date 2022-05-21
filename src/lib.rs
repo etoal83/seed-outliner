@@ -126,6 +126,7 @@ enum Msg {
     SaveEditedNodeContent,
     InsertNewNode,
     DeleteNodeBackward,
+    RemoveNode(Vertex),
     CaretPositionChanged,
 }
 
@@ -200,6 +201,12 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         Msg::DeleteNodeBackward => {
             log!("DeleteNodeBackward");
         }
+        Msg::RemoveNode(vertex) => {
+            log!("RemoveNode");
+            let id = *model.tree.get(vertex).unwrap().get();
+            vertex.remove(&mut model.tree);
+            let _ = model.nodes.remove(&id);
+        },
         Msg::CaretPositionChanged => {
             if let Some(editing_node) = &mut model.editing_node {
                 let selection = document().get_selection().expect("get selection").unwrap();
