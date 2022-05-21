@@ -24,6 +24,12 @@ seed_styles = { git = "https://github.com/seed-rs/styles_hooks", package = "seed
 unicode-segmentation = "1.9.0"
 uuid = "0.8.2"
 
+[dependencies.web-sys]
+version = "*"
+features = [
+  "Range",
+]
+
 [profile.release]
 lto = true
 opt-level = 'z'
