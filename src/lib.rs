@@ -15,14 +15,15 @@ use uuid::Uuid;
 
 fn init(_: Url, orders: &mut impl Orders<Msg>) -> Model {
     let root_node_id = Uuid::new_v4();
-    let mut arena = Arena::new();
-    let root = arena.new_node(root_node_id);
-
     let root_node = Node {
         id: root_node_id,
-        content: root.to_string(),
+        content: "".to_string(),
         folded: false,
     };
+    let mut arena = Arena::new();
+    let root = arena.new_node(root_node.clone());
+
+    // TODO: Remove
     let mut nodes = Nodes::new();
     nodes.insert(root_node_id, root_node);
     
@@ -31,10 +32,11 @@ fn init(_: Url, orders: &mut impl Orders<Msg>) -> Model {
     }));
     
     Model {
-        nodes: nodes,
         tree: arena,
         root: root,
         editing_node: None,
+        // TODO: Remove
+        nodes: nodes,
     }.add_mock_data()
 }
 
@@ -43,14 +45,17 @@ fn init(_: Url, orders: &mut impl Orders<Msg>) -> Model {
 // ------ ------
 
 struct Model {
-    nodes: Nodes,
-    tree: Arena<Uuid>,
+    tree: Arena<Node>,
     root: Vertex,
     editing_node: Option<EditingNode>,
+    // TODO: Remove field
+    nodes: Nodes,
 }
 
+// TODO: Remove
 type Nodes = IndexMap<Uuid, Node>;
 
+#[derive(Clone)]
 struct Node {
     id: Uuid,
     content: String,
@@ -95,17 +100,18 @@ impl Model {
             content: "Third child node.".to_owned(),
             folded: false,
         };
-        self.nodes.insert(id_0, first_node);
-        self.nodes.insert(id_1, second_node);
-        self.nodes.insert(id_2, third_node);
-        self.nodes.insert(id_0_0, first_child_node);
-        self.nodes.insert(id_2_0, third_child_node);
+        // TODO: Remove
+        self.nodes.insert(id_0, first_node.clone());
+        self.nodes.insert(id_1, second_node.clone());
+        self.nodes.insert(id_2, third_node.clone());
+        self.nodes.insert(id_0_0, first_child_node.clone());
+        self.nodes.insert(id_2_0, third_child_node.clone());
 
-        let first_node = self.tree.new_node(id_0);
-        let second_node = self.tree.new_node(id_1);
-        let third_node = self.tree.new_node(id_2);
-        let first_child_node = self.tree.new_node(id_0_0);
-        let third_child_node = self.tree.new_node(id_2_0);
+        let first_node = self.tree.new_node(first_node);
+        let second_node = self.tree.new_node(second_node);
+        let third_node = self.tree.new_node(third_node);
+        let first_child_node = self.tree.new_node(first_child_node);
+        let third_child_node = self.tree.new_node(third_child_node);
         self.root.append(first_node, &mut self.tree);
         self.root.append(second_node, &mut self.tree);
         self.root.append(third_node, &mut self.tree);
@@ -134,14 +140,13 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     match msg {
         Msg::StartEditingNodeContent(Some(vertex)) => {
             if let Some(node) = model.tree.get(vertex) {
-                let id = *node.get();
-                let node = model.nodes.get(&id).unwrap();
+                let node = node.get();
                 let content_element = ElRef::new();
                 let selection = document().get_selection().expect("get selection").unwrap();
                 let caret_position = selection.focus_offset();
 
                 model.editing_node = Some(EditingNode {
-                    id,
+                    id: node.id,
                     content: node.content.clone(),
                     content_element: content_element.clone(),
                     vertex,
@@ -170,9 +175,8 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         Msg::SaveEditedNodeContent => {
             log!("SaveEditedNodeContent");
             if let Some(editing_node) = model.editing_node.take() {
-                if let Some(node) = model.nodes.get_mut(&editing_node.id) {
-                    node.content = editing_node.content.to_owned();
-                }
+                let mut node = model.tree.get_mut(editing_node.vertex).expect("vertex exists").get_mut();
+                node.content = editing_node.content.to_owned();
             }
         },
         Msg::InsertNewNode => {
@@ -187,13 +191,11 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
 
                 let new_id = Uuid::new_v4();
                 
-                model.nodes.insert(new_id, Node{
+                let new_node = model.tree.new_node(Node {
                     id: new_id,
                     content: right.join("").to_owned(),
                     folded: false,
                 });
-                
-                let new_node = model.tree.new_node(new_id);
                 editing_node.vertex.insert_after(new_node, &mut model.tree);
                 orders.send_msg(Msg::StartEditingNodeContent(Some(new_node)));
             }
@@ -220,14 +222,13 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                     let taken_content = editing_node.content.to_owned();
                     orders.send_msg(Msg::RemoveNode(editing_node.vertex));
                     
-                    let id = *model.tree.get(vertex).unwrap().get();
-                    let node = model.nodes.get_mut(&id).unwrap();
+                    let node = model.tree.get_mut(vertex).unwrap().get_mut();
                     let caret_position_dest = UnicodeSegmentation::graphemes(node.content.as_str(), true).collect::<Vec<&str>>().len() as u32;
                     node.content = format!("{}{}", node.content.to_owned(), taken_content);
                     let content_element = ElRef::new();
 
                     model.editing_node = Some(EditingNode {
-                        id,
+                        id: node.id,
                         content: node.content.clone(),
                         content_element: content_element.clone(),
                         vertex,
@@ -258,9 +259,8 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         },
         Msg::RemoveNode(vertex) => {
             log!("RemoveNode");
-            let id = *model.tree.get(vertex).unwrap().get();
+            let node = model.tree.get(vertex).unwrap().get();
             vertex.remove(&mut model.tree);
-            let _ = model.nodes.remove(&id);
         },
         Msg::CaretPositionChanged => {
             if let Some(editing_node) = &mut model.editing_node {
@@ -279,15 +279,16 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
 
 fn view(model: &Model) -> seed::virtual_dom::Node<Msg> {
     div![
+        // TODO: Remove argument `nodes`
         view_nodes(&model.nodes, &model.tree, &model.root, model.editing_node.as_ref()),
     ]
 }
 
-fn view_nodes(nodes: &Nodes, tree: &Arena<Uuid>, current_vertex: &Vertex, editing_node: Option<&EditingNode>) -> Vec<seed::virtual_dom::Node<Msg>> {
+// TODO: Remove argument `nodes`
+fn view_nodes(nodes: &Nodes, tree: &Arena<Node>, current_vertex: &Vertex, editing_node: Option<&EditingNode>) -> Vec<seed::virtual_dom::Node<Msg>> {
     current_vertex.children(tree).map(|vertex| {
-        let id = *tree.get(vertex).unwrap().get();
-        let node = nodes.get(&id).unwrap();
-        let is_editing = Some(id) == editing_node.map(|editing_node| editing_node.id);
+        let node = tree.get(vertex).unwrap().get();
+        let is_editing = Some(node.id) == editing_node.map(|editing_node| editing_node.id);
         let is_deletable = editing_node.map_or(false, |editing_node| editing_node.caret_position == 0);
 
         div![
