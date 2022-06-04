@@ -21,11 +21,7 @@ fn init(_: Url, orders: &mut impl Orders<Msg>) -> Model {
         folded: false,
     };
     let mut arena = Arena::new();
-    let root = arena.new_node(root_node.clone());
-
-    // TODO: Remove
-    let mut nodes = Nodes::new();
-    nodes.insert(root_node_id, root_node);
+    let root = arena.new_node(root_node);
     
     orders.stream(streams::document_event(Ev::SelectionChange, |_| {
         Msg::CaretPositionChanged
@@ -35,8 +31,6 @@ fn init(_: Url, orders: &mut impl Orders<Msg>) -> Model {
         tree: arena,
         root: root,
         editing_node: None,
-        // TODO: Remove
-        nodes: nodes,
     }.add_mock_data()
 }
 
@@ -48,14 +42,8 @@ struct Model {
     tree: Arena<Node>,
     root: Vertex,
     editing_node: Option<EditingNode>,
-    // TODO: Remove field
-    nodes: Nodes,
 }
 
-// TODO: Remove
-type Nodes = IndexMap<Uuid, Node>;
-
-#[derive(Clone)]
 struct Node {
     id: Uuid,
     content: String,
@@ -100,12 +88,6 @@ impl Model {
             content: "Third child node.".to_owned(),
             folded: false,
         };
-        // TODO: Remove
-        self.nodes.insert(id_0, first_node.clone());
-        self.nodes.insert(id_1, second_node.clone());
-        self.nodes.insert(id_2, third_node.clone());
-        self.nodes.insert(id_0_0, first_child_node.clone());
-        self.nodes.insert(id_2_0, third_child_node.clone());
 
         let first_node = self.tree.new_node(first_node);
         let second_node = self.tree.new_node(second_node);
