@@ -279,13 +279,11 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
 
 fn view(model: &Model) -> seed::virtual_dom::Node<Msg> {
     div![
-        // TODO: Remove argument `nodes`
-        view_nodes(&model.nodes, &model.tree, &model.root, model.editing_node.as_ref()),
+        view_nodes(&model.tree, &model.root, model.editing_node.as_ref()),
     ]
 }
 
-// TODO: Remove argument `nodes`
-fn view_nodes(nodes: &Nodes, tree: &Arena<Node>, current_vertex: &Vertex, editing_node: Option<&EditingNode>) -> Vec<seed::virtual_dom::Node<Msg>> {
+fn view_nodes(tree: &Arena<Node>, current_vertex: &Vertex, editing_node: Option<&EditingNode>) -> Vec<seed::virtual_dom::Node<Msg>> {
     current_vertex.children(tree).map(|vertex| {
         let node = tree.get(vertex).unwrap().get();
         let is_editing = Some(node.id) == editing_node.map(|editing_node| editing_node.id);
@@ -345,7 +343,7 @@ fn view_nodes(nodes: &Nodes, tree: &Arena<Node>, current_vertex: &Vertex, editin
                 s().margin_left(px(10))
                     .border_left(CssBorderLeft::Border(CssBorderWidth::Length(px(1)), CssBorderStyle::Solid, CssColor::Rgba(0., 0., 0., 0.4)))
                     .padding_left(px(20)),
-                IF!(vertex.children(tree).peekable().peek().is_some() => view_nodes(nodes, tree, &vertex, editing_node)),
+                IF!(vertex.children(tree).peekable().peek().is_some() => view_nodes(tree, &vertex, editing_node)),
             ]
         ]
     }).collect()
