@@ -2,33 +2,39 @@
 // TODO: Remove
 #![allow(dead_code, unused_variables)]
 
-use indexmap::IndexMap;
-use indextree::{Arena, NodeId as Vertex};
+use generational_indextree::{Arena, NodeId as Vertex};
 use seed::{prelude::*, *};
 use seed_styles::{*, px, rem};
+use serde::{Deserialize, Serialize};
 use unicode_segmentation::UnicodeSegmentation;
 use uuid::Uuid;
+
+const TREE_STORAGE_KEY: &str = "seed-outliner-tree";
 
 // ------ ------
 //     Init
 // ------ ------
 
 fn init(_: Url, orders: &mut impl Orders<Msg>) -> Model {
-    let root_node_id = Uuid::new_v4();
-    let root_node = Node {
-        id: root_node_id,
-        content: "".to_string(),
-        folded: false,
+    let mut tree: Arena<Node> = LocalStorage::get(TREE_STORAGE_KEY).unwrap_or(Arena::new());
+
+    let root = if tree.is_empty() {
+        tree.new_node(Node {
+            id: Uuid::new_v4(),
+            content: "root".to_string(),
+            folded: false,
+        })
+    } else {
+        // TODO: Ensure to get root node
+        tree.iter_pairs().next().unwrap().0
     };
-    let mut arena = Arena::new();
-    let root = arena.new_node(root_node);
     
     orders.stream(streams::document_event(Ev::SelectionChange, |_| {
         Msg::CaretPositionChanged
     }));
     
     Model {
-        tree: arena,
+        tree: tree,
         root: root,
         editing_node: None,
     }.add_mock_data()
@@ -44,6 +50,7 @@ struct Model {
     editing_node: Option<EditingNode>,
 }
 
+#[derive(Debug, Deserialize, Serialize)]
 struct Node {
     id: Uuid,
     content: String,
@@ -253,6 +260,7 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             }
         }
     }
+    LocalStorage::insert(TREE_STORAGE_KEY, &model.tree).expect("node tree saved");
 }
 
 // ------ ------
