@@ -123,6 +123,8 @@ enum Msg {
     DeleteNodeBackward,
     RemoveNode(Vertex),
     CaretPositionChanged,
+    IndentNode,
+    OutdentNode,
 }
 
 fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
@@ -258,7 +260,38 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 editing_node.caret_position = caret_position;
                 log!("Msg::CaretPositionChanged", caret_position);
             }
-        }
+        },
+        Msg::IndentNode => {
+            let editing_node = match &mut model.editing_node {
+                Some(node) => node,
+                None => return,
+            };
+
+            if let Some(previous_sibling) = model.tree[editing_node.vertex].previous_sibling() {
+                orders.send_msg(Msg::SaveEditedNodeContent);
+                previous_sibling.append(editing_node.vertex, &mut model.tree);
+                orders.send_msg(Msg::StartEditingNodeContent(Some(editing_node.vertex)));
+            }
+        },
+        Msg::OutdentNode => {
+            let editing_node = match &model.editing_node {
+                Some(node) => node,
+                None => return,
+            };
+
+            if let Some(parent) = model.tree[editing_node.vertex].parent() {
+                if parent == model.root { return };
+                orders.send_msg(Msg::SaveEditedNodeContent);
+
+                let following_siblings = editing_node.vertex.following_siblings(&model.tree).skip(1).collect::<Vec<_>>();
+                for node in following_siblings {
+                    editing_node.vertex.append(node, &mut model.tree);
+                }
+
+                parent.insert_after(editing_node.vertex, &mut model.tree);
+                orders.send_msg(Msg::StartEditingNodeContent(Some(editing_node.vertex)));
+            }
+        },
     }
     LocalStorage::insert(TREE_STORAGE_KEY, &model.tree).expect("node tree saved");
 }
@@ -324,6 +357,18 @@ fn view_nodes(tree: &Arena<Node>, current_vertex: &Vertex, editing_node: Option<
                     keyboard_ev(Ev::KeyDown, move |keyboard_event| {
                         IF!(!keyboard_event.is_composing() && keyboard_event.key_code() != 229 && is_deletable && keyboard_event.key().as_str() == "Backspace" => {
                             Msg::DeleteNodeBackward
+                        })
+                    }),
+                    keyboard_ev(Ev::KeyDown, |keyboard_event| {
+                        IF!(!keyboard_event.is_composing() && !keyboard_event.shift_key() && keyboard_event.key().as_str() == "Tab" => {
+                            keyboard_event.prevent_default();
+                            Msg::IndentNode
+                        })
+                    }),
+                    keyboard_ev(Ev::KeyDown, |keyboard_event| {
+                        IF!(!keyboard_event.is_composing() && keyboard_event.shift_key() && keyboard_event.key().as_str() == "Tab" => {
+                            keyboard_event.prevent_default();
+                            Msg::OutdentNode
                         })
                     }),
                 ],
