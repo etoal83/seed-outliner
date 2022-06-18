@@ -4,7 +4,7 @@
 
 use generational_indextree::{Arena, NodeId as Vertex};
 use seed::{prelude::*, *};
-use seed_styles::{*, px, rem};
+use seed_styles::{*, pc, px, rem};
 use serde::{Deserialize, Serialize};
 use unicode_segmentation::UnicodeSegmentation;
 use uuid::Uuid;
@@ -317,10 +317,12 @@ fn view_nodes(tree: &Arena<Node>, current_vertex: &Vertex, editing_node: Option<
             div![
                 C!["node-self"],
                 el_key(&node.id),
-                s().padding_y(rem(0.2)),
+                s().padding_y(rem(0.2))
+                    .padding_x(px(5)),
                 a![
                     C!["node-bullet"],
-                    s().display(CssDisplay::InlineBlock),
+                    s().display(CssDisplay::InlineBlock)
+                        .width(px(16)),
                     span![
                         C!["material-icons"],
                         s().font_size(rem(0.7)),
@@ -336,7 +338,8 @@ fn view_nodes(tree: &Arena<Node>, current_vertex: &Vertex, editing_node: Option<
                     }),
                     s().display(CssDisplay::InlineBlock)
                         .margin_left(px(8))
-                        .font_size(rem(1)),
+                        .font_size(rem(1))
+                        .width(CssWidth::Percentage(pc(90))),
                     attrs!{
                         At::ContentEditable => true,
                     },
