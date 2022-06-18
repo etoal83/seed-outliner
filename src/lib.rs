@@ -19,11 +19,42 @@ fn init(_: Url, orders: &mut impl Orders<Msg>) -> Model {
     let mut tree: Arena<Node> = LocalStorage::get(TREE_STORAGE_KEY).unwrap_or(Arena::new());
 
     let root = if tree.is_empty() {
-        tree.new_node(Node {
+        let root = tree.new_node(Node {
             id: Uuid::new_v4(),
             content: "root".to_string(),
             folded: false,
-        })
+        });
+        let node_welcome = Node {
+            id: Uuid::new_v4(),
+            content: "Welcome to Seed-Outliner!".to_owned(),
+            folded: false,
+        };
+        let node_guide_start_edit = Node {
+            id: Uuid::new_v4(),
+            content: "You can click here to start editing contents.".to_owned(),
+            folded: false,
+        };
+        let node_guide_indent = Node {
+            id: Uuid::new_v4(),
+            content: "You can indent items by pressing \"Tab\" key.".to_owned(),
+            folded: false,
+        };
+        let node_guide_unindent = Node {
+            id: Uuid::new_v4(),
+            content: "...and unindent by pressing \"Shift + Tab\" key.".to_owned(),
+            folded: false,            
+        };
+
+        let node_welcome = tree.new_node(node_welcome);
+        let node_guide_start_edit = tree.new_node(node_guide_start_edit);
+        let node_guide_indent = tree.new_node(node_guide_indent);
+        let node_guide_unindent = tree.new_node(node_guide_unindent);
+        root.append(node_welcome, &mut tree);
+        root.append(node_guide_start_edit, &mut tree);
+        root.append(node_guide_indent, &mut tree);
+        node_guide_indent.append(node_guide_unindent, &mut tree);
+
+        root
     } else {
         // TODO: Ensure to get root node
         tree.iter_pairs().next().unwrap().0
@@ -37,7 +68,7 @@ fn init(_: Url, orders: &mut impl Orders<Msg>) -> Model {
         tree: tree,
         root: root,
         editing_node: None,
-    }.add_mock_data()
+    }
 }
 
 // ------ ------
@@ -66,50 +97,6 @@ struct EditingNode {
     caret_position: u32,
 }
 
-// TODO: Remove
-impl Model {
-    fn add_mock_data(mut self) -> Self {
-        let (id_0, id_1, id_2, id_0_0, id_2_0) = (Uuid::new_v4(), Uuid::new_v4(), Uuid::new_v4(), Uuid::new_v4(), Uuid::new_v4());
-        let first_node = Node {
-            id: id_0,
-            content: "First node.".to_owned(),
-            folded: false,
-        };
-        let second_node = Node {
-            id: id_1,
-            content: "Second node.".to_owned(),
-            folded: false,
-        };
-        let third_node = Node {
-            id: id_2,
-            content: "Third node.".to_owned(),
-            folded: false,
-        };
-        let first_child_node = Node {
-            id: id_0_0,
-            content: "First child node.".to_owned(),
-            folded: false,            
-        };
-        let third_child_node = Node {
-            id: id_0_0,
-            content: "Third child node.".to_owned(),
-            folded: false,
-        };
-
-        let first_node = self.tree.new_node(first_node);
-        let second_node = self.tree.new_node(second_node);
-        let third_node = self.tree.new_node(third_node);
-        let first_child_node = self.tree.new_node(first_child_node);
-        let third_child_node = self.tree.new_node(third_child_node);
-        self.root.append(first_node, &mut self.tree);
-        self.root.append(second_node, &mut self.tree);
-        self.root.append(third_node, &mut self.tree);
-        first_node.append(first_child_node, &mut self.tree);
-        third_node.append(third_child_node, &mut self.tree);
-
-        self
-    }
-}
 
 // ------ ------
 //    Update
