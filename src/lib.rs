@@ -114,6 +114,8 @@ enum Msg {
     OutdentNode,
     MoveNodeUp,
     MoveNodeDown,
+    FoldChildren(Vertex),
+    UnfoldChildren(Vertex),
 }
 
 fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
@@ -319,6 +321,16 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 }
             }
         },
+        Msg::FoldChildren(vertex) => {
+            log!("FoldChildren");
+            let node = model.tree.get_mut(vertex).unwrap().get_mut();
+            node.folded = true;
+        },
+        Msg::UnfoldChildren(vertex) => {
+            log!("UnfoldChildren");
+            let node = model.tree.get_mut(vertex).unwrap().get_mut();
+            node.folded = false;
+        },
     }
     LocalStorage::insert(TREE_STORAGE_KEY, &model.tree).expect("node tree saved");
 }
@@ -349,13 +361,22 @@ fn view_nodes(tree: &Arena<Node>, current_vertex: &Vertex, editing_node: Option<
                 a![
                     C!["node-bullet"],
                     s().display(CssDisplay::InlineBlock)
-                        .width(px(16)),
-                    span![
+                        .text_align(CssTextAlign::Center)
+                        .vertical_align(CssVerticalAlign::Top)
+                        .width(px(12)),
+                    attrs!{At::TabIndex => -1},
+                    IF!(!node.folded => span![
                         C!["material-icons"],
                         s().font_size(rem(0.7)),
-                        "fiber_manual_record"
-                    ],
-                    attrs!{At::TabIndex => -1},
+                        "fiber_manual_record",
+                        IF!(vertex.children(tree).next().is_some() => ev(Ev::Click, move |_| Msg::FoldChildren(vertex)))
+                    ]),
+                    IF!(node.folded => span![
+                        C!["material-icons"],
+                        s().font_size(rem(1.0)),
+                        "play_arrow",
+                        ev(Ev::Click, move |_| Msg::UnfoldChildren(vertex))
+                    ]),
                 ],
                 div![
                     C!["node-content"],
@@ -420,7 +441,7 @@ fn view_nodes(tree: &Arena<Node>, current_vertex: &Vertex, editing_node: Option<
                 s().margin_left(px(10))
                     .border_left(CssBorderLeft::Border(CssBorderWidth::Length(px(1)), CssBorderStyle::Solid, CssColor::Rgba(0., 0., 0., 0.4)))
                     .padding_left(px(20)),
-                IF!(vertex.children(tree).peekable().peek().is_some() => view_nodes(tree, &vertex, editing_node)),
+                IF!(!node.folded && vertex.children(tree).next().is_some() => view_nodes(tree, &vertex, editing_node)),
             ]
         ]
     }).collect()
