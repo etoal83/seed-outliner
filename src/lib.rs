@@ -21,7 +21,7 @@ fn init(_: Url, orders: &mut impl Orders<Msg>) -> Model {
     let root = if tree.is_empty() {
         let root = tree.new_node(Node {
             id: Uuid::new_v4(),
-            content: "root".to_string(),
+            content: "🌱 Seed Outliner".to_string(),
             folded: false,
         });
         let node_welcome = Node {
@@ -339,9 +339,12 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
 //     View
 // ------ ------
 
-fn view(model: &Model) -> seed::virtual_dom::Node<Msg> {
-    div![
-        view_nodes(&model.tree, &model.root, model.editing_node.as_ref()),
+fn view(model: &Model) -> Vec<seed::virtual_dom::Node<Msg>> {
+    vec![
+        h1![&model.tree[model.root].get().content],
+        div![
+            view_nodes(&model.tree, &model.root, model.editing_node.as_ref()),
+        ],
     ]
 }
 
