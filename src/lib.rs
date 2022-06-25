@@ -16,6 +16,8 @@ const TREE_STORAGE_KEY: &str = "seed-outliner-tree";
 // ------ ------
 
 fn init(_: Url, orders: &mut impl Orders<Msg>) -> Model {
+    init_global_styles();
+
     let mut tree: Arena<Node> = LocalStorage::get(TREE_STORAGE_KEY).unwrap_or(Arena::new());
 
     let root = if tree.is_empty() {
@@ -69,6 +71,18 @@ fn init(_: Url, orders: &mut impl Orders<Msg>) -> Model {
         root: root,
         editing_node: None,
     }
+}
+
+pub fn init_global_styles() {
+    GlobalStyle::default()
+        .style(
+            "a,ul,li,div,p,h1,h2,h3,h4,li,dd,dt,button,label,input",
+            s().font_family("-apple-system, 'BlinkMacSystemFont', 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif, 'Segoe UI Emoji'")
+                .webkit_font_smoothing_antialiased(),
+        )
+        .style("img", s().box_sizing_content_box())
+        .style("*, *:before, *:after", s().box_sizing("inherit"))
+        .activate_init_styles();
 }
 
 // ------ ------
