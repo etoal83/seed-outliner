@@ -225,7 +225,11 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                     content: right.join("").to_owned(),
                     folded: false,
                 });
-                editing_node.vertex.insert_after(new_node, &mut model.tree);
+
+                match editing_node.vertex.children(&model.tree).next() {
+                    Some(child) => editing_node.vertex.prepend(new_node, &mut model.tree),
+                    None => editing_node.vertex.insert_after(new_node, &mut model.tree),
+                };
                 orders.send_msg(Msg::StartEditingNodeContent(Some(new_node)));
             }
         },
