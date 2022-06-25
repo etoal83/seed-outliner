@@ -26,35 +26,68 @@ fn init(_: Url, orders: &mut impl Orders<Msg>) -> Model {
             content: "🌱 Seed Outliner".to_string(),
             folded: false,
         });
-        let node_welcome = Node {
+
+        // Initial contents for getting started
+        let node_welcome = tree.new_node(Node {
             id: Uuid::new_v4(),
             content: "Welcome to Seed-Outliner!".to_owned(),
             folded: false,
-        };
-        let node_guide_start_edit = Node {
+        });
+        let node_guide_start_edit = tree.new_node(Node {
             id: Uuid::new_v4(),
-            content: "You can click here to start editing contents.".to_owned(),
+            content: "You can click [[ here ]] to start editing contents.".to_owned(),
             folded: false,
-        };
-        let node_guide_indent = Node {
+        });
+        let node_guide_indent = tree.new_node(Node {
             id: Uuid::new_v4(),
             content: "You can indent items by pressing \"Tab\" key.".to_owned(),
             folded: false,
-        };
-        let node_guide_unindent = Node {
+        });
+        let node_guide_unindent = tree.new_node(Node {
             id: Uuid::new_v4(),
             content: "...and unindent by pressing \"Shift + Tab\" key.".to_owned(),
-            folded: false,            
-        };
+            folded: false,
+        });
+        let node_guide_swap = tree.new_node(Node {
+            id: Uuid::new_v4(),
+            content: "You can move items up/down by pressing \"Ctrl + ↑↓\" keys.".to_owned(),
+            folded: false,
+        });
+        let node_guide_lets_move_down = tree.new_node(Node {
+            id: Uuid::new_v4(),
+            content: "Let's try to move this item down to the next item!".to_owned(),
+            folded: false,
+        });
+        let node_guide_move_down_dest = tree.new_node(Node {
+            id: Uuid::new_v4(),
+            content: "Items can be moved in the same level.".to_owned(),
+            folded: false,
+        });
+        let node_guide_fold = tree.new_node(Node {
+            id: Uuid::new_v4(),
+            content: "← You can click this bullet to fold/unfold children items".to_owned(),
+            folded: false,
+        });
+        let node_guide_fold_child1 = tree.new_node(Node {
+            id: Uuid::new_v4(),
+            content: "It's important to hide contents you're not focusing on".to_owned(),
+            folded: false,
+        });
+        let node_guide_fold_child2 = tree.new_node(Node {
+            id: Uuid::new_v4(),
+            content: "...as well as to show every content you have.".to_owned(),
+            folded: false,
+        });
 
-        let node_welcome = tree.new_node(node_welcome);
-        let node_guide_start_edit = tree.new_node(node_guide_start_edit);
-        let node_guide_indent = tree.new_node(node_guide_indent);
-        let node_guide_unindent = tree.new_node(node_guide_unindent);
         root.append(node_welcome, &mut tree);
         root.append(node_guide_start_edit, &mut tree);
         root.append(node_guide_indent, &mut tree);
         node_guide_indent.append(node_guide_unindent, &mut tree);
+        root.append(node_guide_swap, &mut tree);
+        node_guide_swap.append(node_guide_lets_move_down, &mut tree);
+        root.append(node_guide_fold, &mut tree);
+        node_guide_fold.append(node_guide_fold_child1, &mut tree);
+        node_guide_fold.append(node_guide_fold_child2, &mut tree);
 
         root
     } else {
@@ -373,7 +406,7 @@ fn view_nodes(tree: &Arena<Node>, current_vertex: &Vertex, editing_node: Option<
             div![
                 C!["node-self"],
                 el_key(&node.id),
-                s().padding_y(rem(0.2))
+                s().padding_y(rem(0.3))
                     .padding_x(px(5)),
                 a![
                     C!["node-bullet"],
