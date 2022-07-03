@@ -152,6 +152,7 @@ struct EditingNode {
 enum Msg {
     StartEditingNodeContent(Option<Vertex>),
     EditingNodeContentChanged(String),
+    PasteTextIntoEditingNode(String),
     SaveEditedNodeContent,
     InsertNewNode,
     DeleteNodeBackward,
@@ -199,6 +200,50 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             log!("EditingNodeContentChanged", content);
             if let Some(editing_node) = &mut model.editing_node {
                 editing_node.content = content;
+            }
+        },
+        Msg::PasteTextIntoEditingNode(text) => {
+            log!("PasteTextIntoNode", text);
+            if let Some(mut editing_node) = model.editing_node.take() {
+                let node = model.tree.get_mut(editing_node.vertex).unwrap().get_mut();
+                let caret_position = editing_node.caret_position;
+                let (i, _) = editing_node.content
+                    .char_indices()
+                    .nth(caret_position as usize)
+                    .unwrap_or((editing_node.content.chars().count(), ' '));
+                editing_node.content.replace_range(i..i, &text);
+                node.content = editing_node.content.to_owned();
+                let caret_position_dest = caret_position + text.chars().count() as u32;
+
+                let content_element = ElRef::new();
+
+                model.editing_node = Some(EditingNode {
+                    id: node.id,
+                    content: node.content.clone(),
+                    content_element: content_element.clone(),
+                    vertex: editing_node.vertex,
+                    caret_position: caret_position_dest,
+                });
+
+                orders.after_next_render(move |_| {
+                    let content_element = content_element.get().expect("content_element");
+                    content_element
+                        .focus()
+                        .expect("focus content_element");
+
+                    let selection = document().get_selection().expect("get selection").unwrap();
+                    let range = document().create_range().expect("create range");
+                    range
+                        .set_start(&content_element.child_nodes().get(0).unwrap(), caret_position_dest)
+                        .expect("Range: set start");
+                    range.collapse();    
+                    selection
+                        .remove_all_ranges()
+                        .expect("Selection: remove all ranges");
+                    selection
+                        .add_range(&range)
+                        .expect("Selection: add range")
+                });
             }
         },
         Msg::SaveEditedNodeContent => {
@@ -452,6 +497,12 @@ fn view_nodes(tree: &Arena<Node>, current_vertex: &Vertex, editing_node: Option<
                         let target = event.current_target().unwrap();
                         let content = target.dyn_ref::<web_sys::HtmlElement>().unwrap().text_content().unwrap();
                         Msg::EditingNodeContentChanged(content)
+                    }),
+                    ev(Ev::Paste, |event| {
+                        event.prevent_default();
+                        let clipboard_event = event.dyn_ref::<web_sys::ClipboardEvent>().unwrap_throw();
+                        let text = clipboard_event.clipboard_data().unwrap().get_data("text/plain").unwrap();
+                        Msg::PasteTextIntoEditingNode(text)
                     }),
                     keyboard_ev(Ev::KeyDown, |keyboard_event| {
                         IF!(!keyboard_event.is_composing() && keyboard_event.key_code() != 229 && keyboard_event.key().as_str() == "Enter" => {
