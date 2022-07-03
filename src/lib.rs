@@ -6,7 +6,6 @@ use generational_indextree::{Arena, NodeId as Vertex};
 use seed::{prelude::*, *};
 use seed_styles::{*, pc, px, rem};
 use serde::{Deserialize, Serialize};
-use unicode_segmentation::UnicodeSegmentation;
 use uuid::Uuid;
 
 const TREE_STORAGE_KEY: &str = "seed-outliner-tree";
@@ -258,16 +257,18 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             if let Some(editing_node) = &mut model.editing_node {
                 let selection = document().get_selection().expect("get selection").unwrap();
                 let caret_position = selection.focus_offset();
-                let s = UnicodeSegmentation::graphemes(editing_node.content.as_str(), true).collect::<Vec<&str>>();
+                let s = editing_node.content.chars().collect::<Vec<_>>();
                 let (left, right) = s.split_at(caret_position as usize);
-                orders.send_msg(Msg::EditingNodeContentChanged(left.join("").to_owned()));
+                let left_content = left.iter().collect::<String>().to_owned();
+                let right_content = right.iter().collect::<String>().to_owned();
+                orders.send_msg(Msg::EditingNodeContentChanged(left_content));
                 orders.send_msg(Msg::SaveEditedNodeContent);
 
                 let new_id = Uuid::new_v4();
                 
                 let new_node = model.tree.new_node(Node {
                     id: new_id,
-                    content: right.join("").to_owned(),
+                    content: right_content,
                     folded: false,
                 });
 
@@ -301,7 +302,7 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                     orders.send_msg(Msg::RemoveNode(editing_node.vertex));
                     
                     let node = model.tree.get_mut(vertex).unwrap().get_mut();
-                    let caret_position_dest = UnicodeSegmentation::graphemes(node.content.as_str(), true).collect::<Vec<&str>>().len() as u32;
+                    let caret_position_dest = node.content.chars().count() as u32;
                     node.content = format!("{}{}", node.content.to_owned(), taken_content);
                     let content_element = ElRef::new();
 

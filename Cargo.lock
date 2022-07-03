@@ -825,7 +825,6 @@ dependencies = [
  "seed",
  "seed_styles",
  "serde",
- "unicode-segmentation",
  "uuid 1.1.1",
  "wasm-bindgen-test",
  "web-sys",
