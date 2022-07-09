@@ -6,6 +6,7 @@ use generational_indextree::{Arena, NodeId as Vertex};
 use seed::{prelude::*, *};
 use seed_styles::{*, pc, px, rem};
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 use uuid::Uuid;
 
 const TREE_STORAGE_KEY: &str = "seed-outliner-tree";
@@ -143,6 +144,28 @@ struct EditingNode {
     caret_position: u32,
 }
 
+#[derive(Debug, PartialEq)]
+enum ArrowKey {
+    Left,
+    Right,
+    Up,
+    Down,
+}
+
+impl FromStr for ArrowKey {
+    type Err = ();
+
+    fn from_str(input: &str) -> Result<ArrowKey, Self::Err> {
+        match input {
+            "ArrowLeft"  => Ok(ArrowKey::Left),
+            "ArrowRight" => Ok(ArrowKey::Right),
+            "ArrowUp"    => Ok(ArrowKey::Up),
+            "ArrowDown"  => Ok(ArrowKey::Down),
+            _ => Err(()),
+        }
+    }
+}
+
 
 // ------ ------
 //    Update
@@ -150,12 +173,15 @@ struct EditingNode {
 
 enum Msg {
     StartEditingNodeContent(Option<Vertex>),
+    SetCaretPositionAt(u32),
     EditingNodeContentChanged(String),
     PasteTextIntoEditingNode(String),
     SaveEditedNodeContent,
     InsertNewNode,
     DeleteNodeBackward,
     RemoveNode(Vertex),
+    MoveCaretToPreviousNode(ArrowKey),
+    MoveCaretToNextNode(ArrowKey),
     CaretPositionChanged,
     IndentNode,
     OutdentNode,
@@ -183,7 +209,7 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 });
 
                 orders.after_next_render(move |_| {
-                    let content_element = content_element.get().expect("content_element");
+                    let content_element = content_element.get().expect_throw("content_element");
 
                     content_element
                         .focus()
@@ -191,6 +217,27 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 });
             }
         },
+        Msg::SetCaretPositionAt(i) => {
+            if let Some(editing_node) = &mut model.editing_node {
+                let content_element = editing_node.content_element.clone();
+
+                orders.after_next_render(move |_| {
+                    let content_element = content_element.get().expect_throw("acquire content element");
+                    let selection = document().get_selection().expect_throw("get selection").unwrap();
+                    let range = document().create_range().expect_throw("create range");
+                    range
+                        .set_start(&content_element.child_nodes().get(0).unwrap(), i)
+                        .expect_throw("Range: set start");
+                    range.collapse();    
+                    selection
+                        .remove_all_ranges()
+                        .expect_throw("Selection: remove all ranges");
+                    selection
+                        .add_range(&range)
+                        .expect_throw("Selection: add range")
+                });
+            }
+        }
         Msg::StartEditingNodeContent(None) => {
             log!("StartEditingNodeContent: None");
             model.editing_node = None;
@@ -341,6 +388,68 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             let node = model.tree.get(vertex).unwrap().get();
             vertex.remove(&mut model.tree);
         },
+        Msg::MoveCaretToPreviousNode(key) => {
+            log!("MoveCaretToPreviousNode");
+            if let Some(editing_node) = &mut model.editing_node {
+                let previous_sibling = editing_node.vertex.preceding_siblings(&model.tree).skip(1).next();
+                let parent = editing_node.vertex.ancestors(&model.tree).skip(1).next();
+                let destination = match (previous_sibling, parent) {
+                    (Some(sibling), _) => sibling.descendants(&model.tree).last(),
+                    (None, Some(parent)) => if parent != model.root { Some(parent) } else { None },
+                    (_, _) => None,
+                };
+                
+                if let Some(vertex) = destination {
+                    orders.send_msg(Msg::SaveEditedNodeContent);
+                    orders.send_msg(Msg::StartEditingNodeContent(Some(vertex)));
+                    orders.force_render_now();
+
+                    let node = model.tree.get(vertex).unwrap().get();
+
+                    match key {
+                        ArrowKey::Left => {
+                            orders.send_msg(Msg::SetCaretPositionAt(node.content.chars().count() as u32));
+                        },
+                        ArrowKey::Up => {
+                            orders.send_msg(Msg::SetCaretPositionAt(0));
+                        },
+                        _ => (),
+                    };
+                }
+            }
+        },
+        Msg::MoveCaretToNextNode(key) => {
+            log!("MoveCaretToNextNode");
+            if let Some(editing_node) = &mut model.editing_node {
+                let children = editing_node.vertex.children(&model.tree).next();
+                let next_sibling = editing_node.vertex.following_siblings(&model.tree).skip(1).next();
+                let ancestors_next_sibling = editing_node.vertex.ancestors(&model.tree).find_map(|vtx| model.tree[vtx].next_sibling());
+                let destination = match (children, next_sibling, ancestors_next_sibling) {
+                    (Some(child), _, _) => Some(child),
+                    (None, Some(sibling), _) => Some(sibling),
+                    (None, None, Some(neighbor)) => Some(neighbor),
+                    (_, _, _) => None,
+                };
+                
+                if let Some(vertex) = destination {
+                    orders.send_msg(Msg::SaveEditedNodeContent);
+                    orders.send_msg(Msg::StartEditingNodeContent(Some(vertex)));
+                    orders.force_render_now();
+
+                    let node = model.tree.get(vertex).unwrap().get();
+
+                    match key {
+                        ArrowKey::Right => {
+                            orders.send_msg(Msg::SetCaretPositionAt(0));
+                        },
+                        ArrowKey::Down => {
+                            orders.send_msg(Msg::SetCaretPositionAt(node.content.chars().count() as u32));
+                        },
+                        _ => (),
+                    };
+                }
+            }
+        },
         Msg::CaretPositionChanged => {
             if let Some(editing_node) = &mut model.editing_node {
                 let selection = document().get_selection().expect("get selection").unwrap();
@@ -450,7 +559,8 @@ fn view_nodes(tree: &Arena<Node>, current_vertex: &Vertex, editing_node: Option<
     current_vertex.children(tree).map(|vertex| {
         let node = tree.get(vertex).unwrap().get();
         let is_editing = Some(node.id) == editing_node.map(|editing_node| editing_node.id);
-        let is_deletable = editing_node.map_or(false, |editing_node| editing_node.caret_position == 0);
+        let caret_at_head = editing_node.map_or(false, |editing_node| editing_node.caret_position == 0);
+        let caret_at_tail = editing_node.map_or(false, |editing_node| editing_node.caret_position == editing_node.content.chars().count() as u32);
 
         div![
             C!["node"],
@@ -515,8 +625,20 @@ fn view_nodes(tree: &Arena<Node>, current_vertex: &Vertex, editing_node: Option<
                         })
                     }),
                     keyboard_ev(Ev::KeyDown, move |keyboard_event| {
-                        IF!(!keyboard_event.is_composing() && keyboard_event.key_code() != 229 && is_deletable && keyboard_event.key().as_str() == "Backspace" => {
+                        IF!(!keyboard_event.is_composing() && keyboard_event.key_code() != 229 && caret_at_head && keyboard_event.key().as_str() == "Backspace" => {
                             Msg::DeleteNodeBackward
+                        })
+                    }),
+                    keyboard_ev(Ev::KeyDown, move |keyboard_event| {
+                        IF!(!keyboard_event.is_composing() && caret_at_head && (!keyboard_event.meta_key() || !keyboard_event.ctrl_key()) && (keyboard_event.key().as_str() == "ArrowUp" || keyboard_event.key().as_str() == "ArrowLeft") => {
+                            let key = ArrowKey::from_str(keyboard_event.key().as_str()).unwrap();
+                            Msg::MoveCaretToPreviousNode(key)
+                        })
+                    }),
+                    keyboard_ev(Ev::KeyDown, move |keyboard_event| {
+                        IF!(!keyboard_event.is_composing() && caret_at_tail && (!keyboard_event.meta_key() || !keyboard_event.ctrl_key()) && (keyboard_event.key().as_str() == "ArrowDown" || keyboard_event.key().as_str() == "ArrowRight") => {
+                            let key = ArrowKey::from_str(keyboard_event.key().as_str()).unwrap();
+                            Msg::MoveCaretToNextNode(key)
                         })
                     }),
                     keyboard_ev(Ev::KeyDown, |keyboard_event| {
