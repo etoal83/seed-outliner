@@ -436,8 +436,9 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
 //     View
 // ------ ------
 
-fn view(model: &Model) -> Vec<seed::virtual_dom::Node<Msg>> {
-    vec![
+fn view(model: &Model) -> seed::virtual_dom::Node<Msg> {
+    div![
+        s().padding_x(px(6)),
         h1![&model.tree[model.root].get().content],
         div![
             view_nodes(&model.tree, &model.root, model.editing_node.as_ref()),
@@ -463,7 +464,9 @@ fn view_nodes(tree: &Arena<Node>, current_vertex: &Vertex, editing_node: Option<
                     s().display(CssDisplay::InlineBlock)
                         .text_align(CssTextAlign::Center)
                         .vertical_align(CssVerticalAlign::Top)
-                        .width(px(12)),
+                        .width(px(18))
+                        .border_radius(CssBorderRadius::Length(px(2))),
+                    IF!(vertex.children(tree).next().is_some() => s().hover().bg_color(CssColor::Rgba(189.0, 195.0, 199.0, 1.0))),
                     attrs!{At::TabIndex => -1},
                     IF!(!node.folded => span![
                         C!["material-icons"],
@@ -544,9 +547,9 @@ fn view_nodes(tree: &Arena<Node>, current_vertex: &Vertex, editing_node: Option<
             ],
             div![
                 C!["node-children"],
-                s().margin_left(px(10))
+                s().margin_left(px(13))
                     .border_left(CssBorderLeft::Border(CssBorderWidth::Length(px(1)), CssBorderStyle::Solid, CssColor::Rgba(0., 0., 0., 0.4)))
-                    .padding_left(px(20)),
+                    .padding_left(px(16)),
                 IF!(!node.folded && vertex.children(tree).next().is_some() => view_nodes(tree, &vertex, editing_node)),
             ]
         ]
